@@ -154,7 +154,7 @@ type Keyfile = (String, HashMap<String, String>, bool);
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
 pub fn encrypt_chacha(
-    cleartext: Vec<u8>,
+    cleartext: &[u8],
     key: &str,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let aead = XChaCha20Poly1305::new_from_slice(key.as_bytes())?;
@@ -167,7 +167,7 @@ pub fn encrypt_chacha(
         .collect();
     let nonce = XNonce::from_slice(rand_string.as_bytes());
     let ciphertext: Vec<u8> = aead
-        .encrypt(nonce, cleartext.as_ref())
+        .encrypt(nonce, cleartext)
         .expect("encryption failure!");
     //ciphertext_to_send includes the length of the ciphertext (to confirm upon decryption), the nonce (needed to decrypt) and the actual ciphertext
     let ciphertext_to_send = Cipher {
@@ -198,11 +198,11 @@ pub fn encrypt_chacha(
 /// let plaintext = decrypt_chacha(ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn decrypt_chacha(enc: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn decrypt_chacha(enc: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let aead = XChaCha20Poly1305::new_from_slice(key.as_bytes())?;
 
     //deserialize input read from file
-    let decoded: Cipher = bincode::deserialize(&enc[..])?;
+    let decoded: Cipher = bincode::deserialize(enc)?;
     let (ciphertext2, len_ciphertext, rand_string2) =
         (decoded.ciphertext, decoded.len, decoded.rand_string);
     //check if included length of ciphertext == actual length of ciphertext
@@ -569,7 +569,7 @@ pub fn decrypt_file(
         .get(&answer)
         .expect("No key with that name");
     let plaintext = if enc == "chacha" {
-        decrypt_chacha(ciphertext, key)?
+        decrypt_chacha(ciphertext.as_ref(), key)?
     } else if enc == "aes" {
         decrypt_aes(ciphertext, key)?
     } else {
@@ -610,7 +610,7 @@ pub fn encrypt_file(
         .get(&answer)
         .expect("No key with that name");
     let ciphertext = if enc == "chacha" {
-        encrypt_chacha(cleartext, key)?
+        encrypt_chacha(cleartext.as_ref(), key)?
     } else if enc == "aes" {
         encrypt_aes(cleartext, key)?
     } else {
