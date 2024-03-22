@@ -29,13 +29,13 @@
 //!
 //! //Encrypt text
 //! //Ciphertext stores the len() of encrypted content, the nonce and the actual ciphertext using bincode
-//! let ciphertext = encrypt_chacha(text_vec, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
+//! let ciphertext = encrypt_chacha(text, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
 //! //let ciphertext = encrypt_chacha(read_file(example.file).unwrap(), key).unwrap(); //read a file as Vec<u8> and then encrypt
 //! //Check that plaintext != ciphertext
 //! assert_ne!(&ciphertext, &text);
 //!
 //! //Decrypt ciphertext to plaintext
-//! let plaintext = decrypt_chacha(ciphertext, key).unwrap();
+//! let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
 //! //Check that text == plaintext
 //! assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 //! ```
@@ -147,16 +147,13 @@ type Keyfile = (String, HashMap<String, String>, bool);
 /// // encrypt_chacha takes plaintext as Vec<u8>. Text needs to be transformed into vector
 /// let text_vec = text.to_vec();
 ///
-/// let ciphertext = encrypt_chacha(text_vec, key).unwrap();
+/// let ciphertext = encrypt_chacha(text, key).unwrap();
 /// assert_ne!(&ciphertext, &text);
 ///
-/// let plaintext = decrypt_chacha(ciphertext, key).unwrap();
+/// let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn encrypt_chacha(
-    cleartext: &[u8],
-    key: &str,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn encrypt_chacha(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let aead = XChaCha20Poly1305::new_from_slice(key.as_bytes())?;
     //generate random nonce
     let mut rng = thread_rng();
@@ -166,9 +163,7 @@ pub fn encrypt_chacha(
         .take(24)
         .collect();
     let nonce = XNonce::from_slice(rand_string.as_bytes());
-    let ciphertext: Vec<u8> = aead
-        .encrypt(nonce, cleartext)
-        .expect("encryption failure!");
+    let ciphertext: Vec<u8> = aead.encrypt(nonce, cleartext).expect("encryption failure!");
     //ciphertext_to_send includes the length of the ciphertext (to confirm upon decryption), the nonce (needed to decrypt) and the actual ciphertext
     let ciphertext_to_send = Cipher {
         len: ciphertext.len(),
@@ -192,10 +187,10 @@ pub fn encrypt_chacha(
 /// // encrypt_chacha takes plaintext as Vec<u8>. Text needs to be transformed into vector
 /// let text_vec = text.to_vec();
 ///
-/// let ciphertext = encrypt_chacha(text_vec, key).unwrap();
+/// let ciphertext = encrypt_chacha(text, key).unwrap();
 /// assert_ne!(&ciphertext, &text);
 ///
-/// let plaintext = decrypt_chacha(ciphertext, key).unwrap();
+/// let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
 pub fn decrypt_chacha(enc: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -229,13 +224,13 @@ pub fn decrypt_chacha(enc: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::err
 /// // encrypt_aes takes plaintext as Vec<u8>. Text needs to be transformed into vector
 /// let text_vec = text.to_vec();
 ///
-/// let ciphertext = encrypt_aes(text_vec, key).unwrap();
+/// let ciphertext = encrypt_aes(text, key).unwrap();
 /// assert_ne!(&ciphertext, &text);
 ///
 /// let plaintext = decrypt_aes(ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn encrypt_aes(cleartext: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn encrypt_aes(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let aead = Aes256GcmSiv::new_from_slice(key.as_bytes())?;
     //generate random nonce
     let mut rng = thread_rng();
@@ -246,7 +241,7 @@ pub fn encrypt_aes(cleartext: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std
         .collect();
     let nonce = AES_Nonce::from_slice(rand_string.as_bytes());
     let ciphertext: Vec<u8> = aead
-        .encrypt(nonce, cleartext.as_ref())
+        .encrypt(nonce, cleartext)
         .expect("encryption failure!");
     //ciphertext_to_send includes the length of the ciphertext (to confirm upon decryption), the nonce (needed to decrypt) and the actual ciphertext
     let ciphertext_to_send = Cipher {
@@ -271,7 +266,7 @@ pub fn encrypt_aes(cleartext: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std
 /// // encrypt_aes takes plaintext as Vec<u8>. Text needs to be transformed into vector
 /// let text_vec = text.to_vec();
 ///
-/// let ciphertext = encrypt_aes(text_vec, key).unwrap();
+/// let ciphertext = encrypt_aes(text, key).unwrap();
 /// assert_ne!(&ciphertext, &text);
 ///
 /// let plaintext = decrypt_aes(ciphertext, key).unwrap();
@@ -612,7 +607,7 @@ pub fn encrypt_file(
     let ciphertext = if enc == "chacha" {
         encrypt_chacha(cleartext.as_ref(), key)?
     } else if enc == "aes" {
-        encrypt_aes(cleartext, key)?
+        encrypt_aes(cleartext.as_ref(), key)?
     } else {
         panic!()
     };
@@ -851,8 +846,7 @@ mod tests {
     fn test_encryt_decrypt_aes() {
         let text = b"This a test";
         let key: &str = "an example very very secret key.";
-        let text_vec = text.to_vec();
-        let ciphertext = encrypt_aes(text_vec, key).unwrap();
+        let ciphertext = encrypt_aes(text, key).unwrap();
         assert_ne!(&ciphertext, &text);
         let plaintext = decrypt_aes(ciphertext, key).unwrap();
         assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
@@ -862,10 +856,9 @@ mod tests {
     fn test_encryt_decrypt_chacha() {
         let text = b"This a test";
         let key: &str = "an example very very secret key.";
-        let text_vec = text.to_vec();
-        let ciphertext = encrypt_chacha(text_vec, key).unwrap();
+        let ciphertext = encrypt_chacha(text, key).unwrap();
         assert_ne!(&ciphertext, &text);
-        let plaintext = decrypt_chacha(ciphertext, key).unwrap();
+        let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
         assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
     }
 
@@ -883,11 +876,11 @@ mod tests {
                 .take(32)
                 .collect();
             let content: Vec<u8> = (0..100).map(|_| rng.sample(&range)).collect();
-            let ciphertext1 = encrypt_chacha(content.clone(), &key).unwrap();
-            let ciphertext2 = encrypt_chacha(content.clone(), &key).unwrap();
-            let ciphertext3 = encrypt_chacha(content.clone(), &key).unwrap();
-            let ciphertext4 = encrypt_chacha(content.clone(), &key).unwrap();
-            let ciphertext5 = encrypt_chacha(content, &key).unwrap();
+            let ciphertext1 = encrypt_chacha(&content, &key).unwrap();
+            let ciphertext2 = encrypt_chacha(&content, &key).unwrap();
+            let ciphertext3 = encrypt_chacha(&content, &key).unwrap();
+            let ciphertext4 = encrypt_chacha(&content, &key).unwrap();
+            let ciphertext5 = encrypt_chacha(&content, &key).unwrap();
             assert_ne!(&ciphertext1, &ciphertext2);
             assert_ne!(&ciphertext1, &ciphertext3);
             assert_ne!(&ciphertext1, &ciphertext4);
@@ -915,11 +908,11 @@ mod tests {
                 .take(32)
                 .collect();
             let content: Vec<u8> = (0..100).map(|_| rng.sample(&range)).collect();
-            let ciphertext1 = encrypt_aes(content.clone(), &key).unwrap();
-            let ciphertext2 = encrypt_aes(content.clone(), &key).unwrap();
-            let ciphertext3 = encrypt_aes(content.clone(), &key).unwrap();
-            let ciphertext4 = encrypt_aes(content.clone(), &key).unwrap();
-            let ciphertext5 = encrypt_aes(content, &key).unwrap();
+            let ciphertext1 = encrypt_aes(&content, &key).unwrap();
+            let ciphertext2 = encrypt_aes(&content, &key).unwrap();
+            let ciphertext3 = encrypt_aes(&content, &key).unwrap();
+            let ciphertext4 = encrypt_aes(&content, &key).unwrap();
+            let ciphertext5 = encrypt_aes(&content, &key).unwrap();
             assert_ne!(&ciphertext1, &ciphertext2);
             assert_ne!(&ciphertext1, &ciphertext3);
             assert_ne!(&ciphertext1, &ciphertext4);
@@ -1052,9 +1045,9 @@ mod tests {
                 .collect();
 
             let content: Vec<u8> = (0..100).map(|_| rng.sample(&range)).collect();
-            let ciphertext = encrypt_chacha(content.clone(), &key).unwrap();
+            let ciphertext = encrypt_chacha(&content, &key).unwrap();
             assert_ne!(&ciphertext, &content);
-            let plaintext = decrypt_chacha(ciphertext, &key).unwrap();
+            let plaintext = decrypt_chacha(&ciphertext, &key).unwrap();
             assert_eq!(format!("{:?}", content), format!("{:?}", plaintext));
 
             i += 1;
@@ -1075,7 +1068,7 @@ mod tests {
                 .collect();
 
             let content: Vec<u8> = (0..100).map(|_| rng.sample(&range)).collect();
-            let ciphertext = encrypt_aes(content.clone(), &key).unwrap();
+            let ciphertext = encrypt_aes(&content, &key).unwrap();
             assert_ne!(&ciphertext, &content);
             let plaintext = decrypt_aes(ciphertext, &key).unwrap();
             assert_eq!(format!("{:?}", content), format!("{:?}", plaintext));
@@ -1087,11 +1080,10 @@ mod tests {
     fn test_example() {
         let text = b"This a test"; //Text to encrypt
         let key: &str = "an example very very secret key."; //Key will normally be chosen from keymap and provided to the encrypt_chacha() function
-        let text_vec = text.to_vec(); //Convert text to Vec<u8>
-        let ciphertext = encrypt_chacha(text_vec, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
+        let ciphertext = encrypt_chacha(text, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
                                                                  //let ciphertext = encrypt_chacha(read_file(example.file).unwrap(), key).unwrap(); //read a file as Vec<u8> and then encrypt
         assert_ne!(&ciphertext, &text); //Check that plaintext != ciphertext
-        let plaintext = decrypt_chacha(ciphertext, key).unwrap(); //Decrypt ciphertext to plaintext
+        let plaintext = decrypt_chacha(&ciphertext, key).unwrap(); //Decrypt ciphertext to plaintext
         assert_eq!(format!("{:?}", text), format!("{:?}", plaintext)); //Check that text == plaintext
     }
 
@@ -1100,12 +1092,11 @@ mod tests {
     fn test_chacha_wrong_key_panic() {
         let text = b"This a another test"; //Text to encrypt
         let key: &str = "an example very very secret key."; //Key will normally be chosen from keymap and provided to the encrypt_chacha() function
-        let text_vec = text.to_vec(); //Convert text to Vec<u8>
-        let ciphertext = encrypt_chacha(text_vec, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
+        let ciphertext = encrypt_chacha(text, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
 
         assert_ne!(&ciphertext, &text); //Check that plaintext != ciphertext
         let key: &str = "an example very very secret key!"; //The ! should result in decryption panic
-        let _plaintext = decrypt_chacha(ciphertext, key).unwrap(); //Decrypt ciphertext to plaintext
+        let _plaintext = decrypt_chacha(ciphertext.as_ref(), key).unwrap(); //Decrypt ciphertext to plaintext
     }
 
     #[test]
@@ -1113,8 +1104,7 @@ mod tests {
     fn test_aes_wrong_key_panic() {
         let text = b"This a another test"; //Text to encrypt
         let key: &str = "an example very very secret key."; //Key will normally be chosen from keymap and provided to the encrypt_chacha() function
-        let text_vec = text.to_vec(); //Convert text to Vec<u8>
-        let ciphertext = encrypt_aes(text_vec, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
+        let ciphertext = encrypt_aes(text, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
         assert_ne!(&ciphertext, &text); //Check that plaintext != ciphertext
         let key: &str = "an example very very secret key!"; //The ! should result in decryption panic
         let _plaintext = decrypt_aes(ciphertext, key).unwrap(); //Decrypt ciphertext to plaintext
