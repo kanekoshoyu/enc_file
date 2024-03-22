@@ -126,7 +126,7 @@ use serde::{Deserialize, Serialize};
 
 //Struct to store ciphertext, nonce and ciphertext.len() in file and to read it from file
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct Cipher {
+pub struct Cipher {
     len: usize,
     rand_string: String,
     ciphertext: Vec<u8>,
