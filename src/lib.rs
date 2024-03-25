@@ -240,9 +240,7 @@ pub fn encrypt_aes(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::
         .take(12)
         .collect();
     let nonce = AES_Nonce::from_slice(rand_string.as_bytes());
-    let ciphertext: Vec<u8> = aead
-        .encrypt(nonce, cleartext)
-        .expect("encryption failure!");
+    let ciphertext: Vec<u8> = aead.encrypt(nonce, cleartext).expect("encryption failure!");
     //ciphertext_to_send includes the length of the ciphertext (to confirm upon decryption), the nonce (needed to decrypt) and the actual ciphertext
     let ciphertext_to_send = Cipher {
         len: ciphertext.len(),
@@ -536,6 +534,8 @@ pub fn choose_hashing_function() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine;
 /// Decrypts file. Taking a keymap "keymap_plaintext" and the choosen encryption "enc" ("chacha" for ChaCha20Poly1305 or "aes" for AES256-GCM-SIV). Returns result.
 pub fn decrypt_file(
     keymap_plaintext: HashMap<String, String>,
@@ -546,7 +546,10 @@ pub fn decrypt_file(
     }
     println!("Decrypting file: please enter file path  ");
     let path = PathBuf::from(get_input_string()?);
+    // file in base64
     let ciphertext = read_file(&path)?;
+    // convert to row encrypted data
+    let ciphertext = BASE64_STANDARD.decode(ciphertext)?;
     let new_filename = PathBuf::from(
         &path
             .to_str()
@@ -570,49 +573,71 @@ pub fn decrypt_file(
     } else {
         panic!()
     };
-
-    save_file(plaintext, &new_filename)?;
+    save_file(plaintext.into(), &new_filename)?;
     Ok(())
 }
 
+#[cfg(test)]
+mod test_interim {
+
+    #[test]
+    fn store_base_64() {
+        use super::*;
+        let store = "hello world";
+        let decoded: String = BASE64_STANDARD.encode(store);
+        let path = Path::new("text");
+        save_file(decoded.into(), &path);
+    }
+}
+
 /// Encrypts file. Taking a keymap "keymap_plaintext" and the choosen encryption "enc" ("chacha" for ChaCha20Poly1305 or "aes" for AES256-GCM-SIV). Returns result.
-pub fn encrypt_file(
+pub fn encrypt_file_procedual(
     keymap_plaintext: HashMap<String, String>,
     enc: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if keymap_plaintext.is_empty() {
         panic!("No keys avaible. Please first add a key.")
     }
-    println!("Encrypting file: please enter file path  ");
-    let path = PathBuf::from(get_input_string()?);
-
-    let new_filename = PathBuf::from(
-        path.clone()
-            .into_os_string()
-            .into_string()
-            .expect("Unable to parse filename!")
-            + r#".crpt"#,
-    );
+    let mut new_filename: PathBuf;
+    let plaintext = loop {
+        println!("Encrypting file: please enter file path  ");
+        let input = get_input_string()?;
+        let input_filepath = PathBuf::from(input);
+        new_filename = PathBuf::from(
+            input_filepath
+                .clone()
+                .into_os_string()
+                .into_string()
+                .expect("Unable to parse filename!")
+                + r#".crpt"#,
+        );
+        match read_file(&input_filepath) {
+            Ok(input_content) => break input_content,
+            Err(e) => println!("no key file found {e}"),
+        }
+    };
 
     println!("Existing keynames");
     for entry in keymap_plaintext.keys() {
         println!("{}", entry)
     }
-    let cleartext = read_file(&path)?;
-    println!("Please provide keyname to encrypt: ");
-    let answer = get_input_string()?;
-    let key = keymap_plaintext
-        .get(&answer)
-        .expect("No key with that name");
-    let ciphertext = if enc == "chacha" {
-        encrypt_chacha(cleartext.as_ref(), key)?
-    } else if enc == "aes" {
-        encrypt_aes(cleartext.as_ref(), key)?
-    } else {
-        panic!()
-    };
 
-    save_file(ciphertext, &new_filename)?;
+    let key = loop {
+        println!("Please provide keyname to encrypt: ");
+        let answer = get_input_string()?;
+        let key = keymap_plaintext.get(&answer);
+        match key {
+            Some(key) => break key,
+            None => {}
+        }
+    };
+    let encrypted = match enc {
+        "chacha" => encrypt_chacha(&plaintext, key)?,
+        "aes" => encrypt_aes(&plaintext, key)?,
+        _ => panic!("unsupported enc"),
+    };
+    let encrypted = BASE64_STANDARD.encode(encrypted);
+    save_file(encrypted.into_bytes(), &new_filename)?;
     Ok(())
 }
 
@@ -1081,7 +1106,7 @@ mod tests {
         let text = b"This a test"; //Text to encrypt
         let key: &str = "an example very very secret key."; //Key will normally be chosen from keymap and provided to the encrypt_chacha() function
         let ciphertext = encrypt_chacha(text, key).unwrap(); //encrypt vec<u8>, returns result(Vec<u8>)
-                                                                 //let ciphertext = encrypt_chacha(read_file(example.file).unwrap(), key).unwrap(); //read a file as Vec<u8> and then encrypt
+                                                             //let ciphertext = encrypt_chacha(read_file(example.file).unwrap(), key).unwrap(); //read a file as Vec<u8> and then encrypt
         assert_ne!(&ciphertext, &text); //Check that plaintext != ciphertext
         let plaintext = decrypt_chacha(&ciphertext, key).unwrap(); //Decrypt ciphertext to plaintext
         assert_eq!(format!("{:?}", text), format!("{:?}", plaintext)); //Check that text == plaintext

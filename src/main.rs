@@ -110,7 +110,7 @@
 // ```
 
 use enc_file::{
-    add_key, choose_hashing_function, create_new_keyfile, decrypt_file, encrypt_file,
+    add_key, choose_hashing_function, create_new_keyfile, decrypt_file, encrypt_file_procedual,
     get_blake3_hash, get_input_string, get_sha2_256_hash, get_sha2_512_hash, get_sha3_256_hash,
     get_sha3_512_hash, read_file, read_keyfile, remove_key,
 };
@@ -187,13 +187,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 remove_key(keymap_plaintext, password)?;
             } else if answer == "3" {
                 //Encrypt file using ChaCha20Poly1305 with choosen key
-                encrypt_file(keymap_plaintext, "chacha")?;
+                encrypt_file_procedual(keymap_plaintext, "chacha")?;
             } else if answer == "4" {
                 //Decrypt file ChaCha20Poly1305 with choosen key
                 decrypt_file(keymap_plaintext, "chacha")?;
             } else if answer == "5" {
                 //Encrypt file using AES256-GCM-SIV with choosen key
-                encrypt_file(keymap_plaintext, "aes")?;
+                encrypt_file_procedual(keymap_plaintext, "aes")?;
             } else if answer == "6" {
                 //Decrypt file using AES256-GCM-SIV with choosen key
                 decrypt_file(keymap_plaintext, "aes")?;
@@ -206,6 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             //User did not a valid number (between 1 and 7)
             println!("Please enter a valid choice")
         }
+        println!("done");
     }
 
     Ok(())
