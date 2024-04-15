@@ -153,7 +153,7 @@ type Keyfile = (String, HashMap<String, String>, bool);
 /// let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn encrypt_chacha(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn encrypt_chacha(cleartext: &[u8], key: &str) -> eyre::Result<Vec<u8>> {
     let aead = XChaCha20Poly1305::new_from_slice(key.as_bytes())?;
     //generate random nonce
     let mut rng = thread_rng();
@@ -193,7 +193,7 @@ pub fn encrypt_chacha(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn st
 /// let plaintext = decrypt_chacha(&ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn decrypt_chacha(enc: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn decrypt_chacha(enc: &[u8], key: &str) -> eyre::Result<Vec<u8>> {
     let aead = XChaCha20Poly1305::new_from_slice(key.as_bytes())?;
 
     //deserialize input read from file
@@ -230,7 +230,7 @@ pub fn decrypt_chacha(enc: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::err
 /// let plaintext = decrypt_aes(ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn encrypt_aes(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn encrypt_aes(cleartext: &[u8], key: &str) -> eyre::Result<Vec<u8>> {
     let aead = Aes256GcmSiv::new_from_slice(key.as_bytes())?;
     //generate random nonce
     let mut rng = thread_rng();
@@ -270,7 +270,7 @@ pub fn encrypt_aes(cleartext: &[u8], key: &str) -> Result<Vec<u8>, Box<dyn std::
 /// let plaintext = decrypt_aes(ciphertext, key).unwrap();
 /// assert_eq!(format!("{:?}", text), format!("{:?}", plaintext));
 /// ```
-pub fn decrypt_aes(enc: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn decrypt_aes(enc: Vec<u8>, key: &str) -> eyre::Result<Vec<u8>> {
     let aead = Aes256GcmSiv::new_from_slice(key.as_bytes())?;
     //deserialize input read from file
     let decoded: Cipher = bincode::deserialize(&enc[..])?;
@@ -289,7 +289,7 @@ pub fn decrypt_aes(enc: Vec<u8>, key: &str) -> Result<Vec<u8>, Box<dyn std::erro
 }
 
 /// Reads userinput from stdin and returns it as String. Returns result.
-pub fn get_input_string() -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_input_string() -> eyre::Result<String> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     let trimmed = input.trim().to_string();
@@ -312,7 +312,7 @@ pub fn get_input_string() -> Result<String, Box<dyn std::error::Error>> {
 /// remove_file(&path).unwrap(); //remove file created for this test
 /// assert_eq!(content, content_read);
 /// ```
-pub fn read_file(path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn read_file(path: &Path) -> eyre::Result<Vec<u8>> {
     let mut f = File::open(path)?;
     let mut buffer: Vec<u8> = Vec::new();
 
@@ -359,7 +359,7 @@ pub fn save_file(data: Vec<u8>, path: &Path) -> std::io::Result<()> {
 /// assert_eq!(hash1, hash2);
 /// assert_ne!(hash1, hash3);
 /// ```
-pub fn get_blake3_hash(data: Vec<u8>) -> Result<blake3::Hash, Box<dyn std::error::Error>> {
+pub fn get_blake3_hash(data: Vec<u8>) -> eyre::Result<blake3::Hash> {
     //check len() of Vec<u8> and for big files use rayon to improve compute time utilizing threads
     let hash: blake3::Hash = if data.len() < 128000 {
         blake3::hash(&data)
@@ -389,7 +389,7 @@ pub fn get_blake3_hash(data: Vec<u8>) -> Result<blake3::Hash, Box<dyn std::error
 /// assert_eq!(hash1, hash2);
 /// assert_ne!(hash1, hash3);
 /// ```
-pub fn get_sha2_256_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_sha2_256_hash(data: Vec<u8>) -> eyre::Result<String> {
     use sha2::{Digest, Sha256};
 
     // create a Sha256 object
@@ -420,7 +420,7 @@ pub fn get_sha2_256_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Er
 /// assert_eq!(hash1, hash2);
 /// assert_ne!(hash1, hash3);
 /// ```
-pub fn get_sha2_512_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_sha2_512_hash(data: Vec<u8>) -> eyre::Result<String> {
     use sha2::{Digest, Sha512};
 
     // create a Sha256 object
@@ -451,7 +451,7 @@ pub fn get_sha2_512_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Er
 /// assert_eq!(hash1, hash2);
 /// assert_ne!(hash1, hash3);
 /// ```
-pub fn get_sha3_256_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_sha3_256_hash(data: Vec<u8>) -> eyre::Result<String> {
     use sha3::{Digest, Sha3_256};
 
     // create a Sha256 object
@@ -482,7 +482,7 @@ pub fn get_sha3_256_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Er
 /// assert_eq!(hash1, hash2);
 /// assert_ne!(hash1, hash3);
 /// ```
-pub fn get_sha3_512_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_sha3_512_hash(data: Vec<u8>) -> eyre::Result<String> {
     use sha3::{Digest, Sha3_512};
 
     // create a Sha256 object
@@ -497,7 +497,7 @@ pub fn get_sha3_512_hash(data: Vec<u8>) -> Result<String, Box<dyn std::error::Er
 }
 
 /// Allows user to choose desired hashing function. Returns result.
-pub fn choose_hashing_function() -> Result<(), Box<dyn std::error::Error>> {
+pub fn choose_hashing_function() -> eyre::Result<()> {
     println!(
         "Please choose type of Hash:\n1 Blake3\n2 SHA2-256\n3 SHA2-512\n4 SHA3-256\n5 SHA3-512"
     );
@@ -537,10 +537,10 @@ pub fn choose_hashing_function() -> Result<(), Box<dyn std::error::Error>> {
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
 /// Decrypts file. Taking a keymap "keymap_plaintext" and the choosen encryption "enc" ("chacha" for ChaCha20Poly1305 or "aes" for AES256-GCM-SIV). Returns result.
-pub fn decrypt_file(
+pub fn decrypt_file_procedual(
     keymap_plaintext: HashMap<String, String>,
     enc: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> eyre::Result<()> {
     if keymap_plaintext.is_empty() {
         panic!("No keys avaible. Please first add a key.")
     }
@@ -594,7 +594,7 @@ mod test_interim {
 pub fn encrypt_file_procedual(
     keymap_plaintext: HashMap<String, String>,
     enc: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> eyre::Result<()> {
     if keymap_plaintext.is_empty() {
         panic!("No keys avaible. Please first add a key.")
     }
@@ -645,7 +645,7 @@ pub fn encrypt_file_procedual(
 pub fn remove_key(
     mut keymap_plaintext: HashMap<String, String>,
     password: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> eyre::Result<()> {
     if keymap_plaintext.is_empty() {
         panic!("No keys avaible. Please first add a key.")
     }
@@ -674,7 +674,7 @@ pub fn remove_key(
 pub fn add_key(
     mut keymap_plaintext: HashMap<String, String>,
     password: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> eyre::Result<()> {
     println!("Please choose name for new key: ");
 
     //Ask for a name to be associated with the new key
@@ -713,7 +713,7 @@ pub fn add_key(
 }
 
 /// Creates a new keyfile. User can choose to create a random key or manually enter 32-long char-utf8 password in a keyfile. Key has to be valid utf8. Resturns result (password, keyfile and bool (true if new keyfile way created)).
-pub fn create_new_keyfile() -> Result<Keyfile, Box<dyn std::error::Error>> {
+pub fn create_new_keyfile() -> eyre::Result<Keyfile> {
     println!("No keyfile found. Create a new one? Y/N");
     let answer = get_input_string()?;
     if answer == "Y" {
@@ -773,7 +773,7 @@ pub fn create_new_keyfile() -> Result<Keyfile, Box<dyn std::error::Error>> {
 }
 
 /// Read keyfile to keymap. Asks for userpassword. Returns result (password, keymap and bool(false as no new keymap was created))
-pub fn read_keyfile() -> Result<Keyfile, Box<dyn std::error::Error>> {
+pub fn read_keyfile() -> eyre::Result<Keyfile> {
     println!("Enter password: ");
     let password = get_input_string()?;
     let hashed_password = blake3::hash(password.trim().as_bytes());
@@ -826,7 +826,7 @@ pub fn read_keyfile() -> Result<Keyfile, Box<dyn std::error::Error>> {
 pub fn encrypt_hashmap(
     keymap_plaintext: HashMap<String, String>,
     password: &str,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> eyre::Result<Vec<u8>> {
     let encoded: Vec<u8> = bincode::serialize(&keymap_plaintext).expect("Unable to encode keymap!");
 
     //encrypt Hashmap with keys
@@ -1147,5 +1147,17 @@ mod tests {
         let hash3 = get_blake3_hash(test2_vec).unwrap();
         //check that the added "." changes the hash
         assert_ne!(hash1, hash3);
+    }
+
+    #[test]
+    fn encrypt_decrypt() {
+        use super::*;
+        let plain_expected = "hello";
+        let key = "iIFgasiZ0ZXwdffPyBKHjj3fLhfQ05gd";
+        let ciphertext = "FQAAAAAAAAAYAAAAAAAAAFY5WGZUaTZlUzNybXlLRndHcEdBbEZhWhUAAAAAAAAAh4qZ680wLAnkEdcmRDD0oS5V8FCa";
+        let plain_actual = BASE64_STANDARD.decode(ciphertext).unwrap();
+        println!("decoded: {plain_actual:?}");
+        let plain_actual = decrypt_chacha(&plain_actual, key).unwrap();
+        assert_eq!(plain_expected.as_bytes(), plain_actual);
     }
 }
