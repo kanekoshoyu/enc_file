@@ -573,7 +573,7 @@ pub fn decrypt_file_procedual(
     } else {
         panic!()
     };
-    save_file(plaintext.into(), &new_filename)?;
+    save_file(plaintext, &new_filename)?;
     Ok(())
 }
 
@@ -626,9 +626,8 @@ pub fn encrypt_file_procedual(
         println!("Please provide keyname to encrypt: ");
         let answer = get_input_string()?;
         let key = keymap_plaintext.get(&answer);
-        match key {
-            Some(key) => break key,
-            None => {}
+        if let Some(key) = key {
+            break key;
         }
     };
     let encrypted = match enc {

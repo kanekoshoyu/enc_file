@@ -153,7 +153,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else {
         loop {
-            menu_selection();
+            if let Err(e) = menu_selection() {
+                println!("error: {e}");
+            }
         }
     }
 
